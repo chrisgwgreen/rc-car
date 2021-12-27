@@ -34,8 +34,8 @@ const webToCpp = (src) => {
             logger.write('public:\n');
             logger.write(`${fileType.toUpperCase()}();\n`);
             logger.write(`const char *get${fileType.toUpperCase()}();\n`);
-            logger.write(`};\n`);
-            logger.write(`#endif\n`);
+            logger.write('};\n');
+            logger.write('#endif\n');
 
             logger.end();
 
@@ -51,17 +51,8 @@ const webToCpp = (src) => {
             logger.write(`#include <${fileType}.h>\n`);
             logger.write(`${fileType.toUpperCase()}::${fileType.toUpperCase()}() {}\n`);
             logger.write(`const char* ${fileType.toUpperCase()}::get${fileType.toUpperCase()}() {\n`);
-            logger.write('    return\n');
-
-            let i = 0;
-            const l = data.length;
-            for(; i < l; i++) {
-                if (data[i] !== '') {
-                    logger.write('\t\t\"' + data[i] + '\"\n');
-                }
-            }
-
-            logger.write('\t\t\"\";\n');
+            logger.write('    return ');
+            logger.write(`R"rawliteral(${data.join('\n').replace(/\\/g, '')})rawliteral";`);
             logger.write('}\n');
             logger.end();
 
@@ -72,5 +63,3 @@ const webToCpp = (src) => {
 };
 
 webToCpp('src/index.html');
-webToCpp('src/css/index.css');
-webToCpp('src/js/index.js');
