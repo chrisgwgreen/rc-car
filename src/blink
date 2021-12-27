@@ -1,0 +1,103 @@
+#define LED_BUILTIN 2
+
+#include <Arduino.h>
+#include <html.h>
+#include <css.h>
+#include <js.h>
+
+// WEBSERVER...
+const char *ssid = "Breath";
+// ESP8266WebServer server(80);
+HTML html;
+CSS css;
+JS js;
+
+// SETTINGS...
+// long r;
+// long g;
+// long b;
+// long inhaleLedDelay;
+// long inhalePauseDelay;
+// long exhaleLedDelay;
+// long exhalePauseDelay;
+
+// ROUTES...
+// void handleHTML() { server.send(200, "text/html", html.getHTML()); }
+// void handleCSS() { server.send(200, "text/css", css.getCSS()); }
+// void handleJS() { server.send(200, "text/html", js.getJS()); }
+
+// void handleSetSettings()
+// {
+//   if (
+//       server.hasArg("r") == false ||
+//       server.hasArg("g") == false ||
+//       server.hasArg("b") == false ||
+//       server.hasArg("iT") == false ||
+//       server.hasArg("iP") == false ||
+//       server.hasArg("eT") == false ||
+//       server.hasArg("eP") == false)
+//   {
+//     server.send(200, "text/plain", "missing values");
+//     return;
+//   }
+
+//   reset();
+
+//   // Colour...
+//   r = server.arg("r").toInt();
+//   g = server.arg("g").toInt();
+//   b = server.arg("b").toInt();
+
+//   // Timings...
+//   inhaleLedDelay = server.arg("iT").toInt() / MAXLEDS;
+//   inhalePauseDelay = server.arg("iP").toInt();
+//   exhaleLedDelay = server.arg("eT").toInt() / MAXLEDS;
+//   exhalePauseDelay = server.arg("eP").toInt();
+
+//   // Write settings to memeory...
+//   memory.write(RAddress, r);
+//   memory.write(GAddress, g);
+//   memory.write(BAddress, b);
+//   memory.write(InDAddress, inhaleLedDelay);
+//   memory.write(InPAddress, inhalePauseDelay);
+//   memory.write(ExDAddress, exhaleLedDelay);
+//   memory.write(ExPAddress, exhalePauseDelay);
+
+//   server.send(200, "text/plain", "success");
+// }
+
+void setup()
+{
+  // Serial
+  Serial.begin(115200);
+  Serial.println();
+  Serial.println("Setting up...");
+
+  // Access Point
+  // Serial.print("Configuring access point...");
+  // WiFi.softAP(ssid);
+
+  // IPAddress myIP = WiFi.softAPIP();
+  // Serial.print("AP IP address: ");
+  // Serial.println(myIP);
+  // server.on("/", handleHTML);
+  // server.on("/css/index.css", handleCSS);
+  // server.on("/js/index.js", handleJS);
+  // server.on("/get/settings", handleGetSettings);
+  // server.on("/set/settings", handleSetSettings);
+  // server.begin();
+  // Serial.println("HTTP server started");
+
+  pinMode(LED_BUILTIN, OUTPUT);
+
+  Serial.println();
+  Serial.println("Setup complete!");
+}
+
+void loop()
+{
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(500);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(500);
+}

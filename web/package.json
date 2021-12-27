@@ -1,0 +1,15 @@
+{
+  "name": "web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Chris GW Green <chrisgwgreen@gmail.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^4.6.1",
+    "eslint-plugin-react": "^7.3.0"
+  }
+}
