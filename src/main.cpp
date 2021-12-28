@@ -1,3 +1,5 @@
+#define LED_BUILTIN 2
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <AsyncTCP.h>
@@ -6,21 +8,24 @@
 #include <html.h>
 #include <motor.h>
 
-// #include <iostream>
-// #include <fstream>
-
-const char *ssid = "RC-CAR";
-const char *password = "123456789";
+const char *ssid = "CAR-1";
 
 HTML html;
 MOTOR motor;
 
-bool ledState = 0;
+bool isConnected = 0;
 const int ledPin = 2;
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
+/**
+ * @brief handleWebSocketMessage processes the message recieved from the controller (in the form or '-100,100').
+ * 
+ * @param arg 
+ * @param data 
+ * @param len 
+ */
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 {
   AwsFrameInfo *info = (AwsFrameInfo *)arg;
@@ -29,15 +34,15 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
     data[len] = 0;
 
     char *coords[2];
-    char *part;
+    char *parts;
     int partIndex = 0;
 
-    part = strtok((char *)data, ",");
+    parts = strtok((char *)data, ",");
 
-    while (part && partIndex < 2)
+    while (parts && partIndex < 2)
     {
-      coords[partIndex] = part;
-      part = strtok(NULL, ",");
+      coords[partIndex] = parts;
+      parts = strtok(NULL, ",");
       partIndex++;
     };
 
@@ -48,21 +53,43 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
   }
 }
 
-void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
-             void *arg, uint8_t *data, size_t len)
+/**
+ * @brief handleEvent is triggered when a websocket message is sent from the html (controller).
+ * 
+ * @param server 
+ * @param client 
+ * @param type 
+ * @param arg 
+ * @param data 
+ * @param len 
+ */
+void handleEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
+                 void *arg, uint8_t *data, size_t len)
 {
+
   switch (type)
   {
   case WS_EVT_CONNECT:
+
+    Serial.print("IS CONNECTED -> ");
+    Serial.println(isConnected);
+
+    if (isConnected)
+      client->close();
+
     Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-    ledState = 1;
+
+    client->text((char *)ssid);
+    isConnected = 1;
     break;
   case WS_EVT_DISCONNECT:
     Serial.printf("WebSocket client #%u disconnected\n", client->id());
-    ledState = 0;
+    ws.textAll("disconnected");
+    isConnected = 0;
     break;
   case WS_EVT_DATA:
     handleWebSocketMessage(arg, data, len);
+    isConnected = 1;
     break;
   case WS_EVT_PONG:
   case WS_EVT_ERROR:
@@ -70,21 +97,16 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   }
 }
 
-void initWebSocket()
-{
-  ws.onEvent(onEvent);
-  server.addHandler(&ws);
-}
-
+/**
+ * @brief 
+ * setup initialises the esp32's gpio pins and core functionality (e.g. setting up the wireless access point)
+ */
 void setup()
 {
   Serial.begin(115200);
 
-  // SETUP MOTOR
-  motor.setup();
-
   // ACCESS POINT
-  WiFi.softAP(ssid, password);
+  WiFi.softAP(ssid);
 
   if (!MDNS.begin("rc"))
   {
@@ -98,20 +120,27 @@ void setup()
   Serial.println("mDNS - http://rc.local");
 
   // SERVER
-  initWebSocket();
-
+  ws.onEvent(handleEvent);
+  server.addHandler(&ws);
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "text/html", html.getHTML()); });
 
   server.begin();
 
-  // MISC
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
+  // MOTOR
+  // ----------
+  motor.setup();
+
+  // LED
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
+/**
+ * @brief loop repeats continously whilst the esp32 is powered. In this loop, the led state is maintained (based on whether there are any connections) and the websockets are managed here. 
+ */
 void loop()
 {
   ws.cleanupClients();
-  digitalWrite(ledPin, ledState);
+  digitalWrite(LED_BUILTIN, isConnected);
 }

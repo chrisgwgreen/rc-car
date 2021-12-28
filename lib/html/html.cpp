@@ -43,6 +43,18 @@ const char* HTML::getHTML() {
         left: 50%;
         top: 10%;
         transform: translateX(-50%);
+        box-shadow: inset 0 0 1vw #000000;
+      }
+
+      #wrapper:after {
+        content: "CAR-1";
+        position: absolute;
+        bottom: -20vw;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: monospace;
+        font-size: min(6vw, 50px);
+        color: #393d48;
       }
 
       .arrow-container {
@@ -56,10 +68,13 @@ const char* HTML::getHTML() {
         display: flex;
         align-items: center;
         justify-content: center;
+        box-shadow: 0 0 1vw #000000;
       }
 
       .cheron {
-        position: absolute;
+        position: absolute; 
+        max-width: 70px;
+        max-height: 70px;
         width: 6vw;
         height: 6vw;
         border-bottom: 1vw solid;
@@ -95,6 +110,25 @@ const char* HTML::getHTML() {
         max-height: 170px;
         border-radius: 50%;
         cursor: pointer;
+      }
+
+      #control:before {
+        content: "";
+        background: #cd1f47;
+        width: 4vw;
+        height: 4vw;
+        max-width: 30px;
+        max-height: 30px;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        box-shadow: inset 0 0 5px #000000;
+      }
+
+      #control.active:before {
+        background: #37c75c;
       }
     </style>
   </head>
@@ -156,7 +190,11 @@ const char* HTML::getHTML() {
 
       const render = (x, y) => {
         control.setAttribute("style", `transform: translate(${x}px, ${y}px)`);
-        websocket.send(`${Math.floor((x / halfWrapperDimension) * 100)},${-Math.floor((y / halfWrapperDimension) * 100)}`);
+        websocket.send(
+          `${Math.floor((x / halfWrapperDimension) * 100)},${-Math.floor(
+            (y / halfWrapperDimension) * 100
+          )}`
+        );
       };
 
       const handleInteractionEnd = () => {
@@ -183,18 +221,25 @@ const char* HTML::getHTML() {
 
       const handleOpen = () => {
         console.log("Connection opened");
-      }
+      };
 
       const handleClose = () => {
         console.log("Connection closed");
-        setTimeout(handleInitWebSocket, 2000);
-      }
+        control.classList.remove("active");
+      };
+
+      const handleMessage = (e) => {
+        console.log("Message - ", e.data);
+
+        control.classList.add("active");
+      };
 
       const handleInitWebSocket = () => {
         console.log("Trying to open a WebSocket connection...");
         websocket = new WebSocket(gateway);
         websocket.onopen = handleOpen;
         websocket.onclose = handleClose;
+        websocket.onmessage = handleMessage;
       };
 
       handleResize();

@@ -1,11 +1,3 @@
-
-#define ENA 13
-#define IN_1 12
-#define IN_2 14
-#define IN_3 27
-#define IN_4 26
-#define ENB 25
-
 #include <motor.h>
 #include <analogWrite.h>
 
@@ -13,6 +5,10 @@ int minSpeed = 175;
 
 MOTOR::MOTOR() {}
 
+/**
+ * @brief setup initalises the pin outs for the l298n motor driver. 
+ * 
+ */
 void MOTOR::setup()
 {
   pinMode(ENA, OUTPUT);
@@ -29,6 +25,10 @@ void MOTOR::setup()
   digitalWrite(IN_4, LOW);
 };
 
+/**
+ * @brief setMotor takes the x/y position of the controller and determines the power to be sent each motor. 
+ * 
+ */
 void MOTOR::setMotor(int x, int y)
 {
 
