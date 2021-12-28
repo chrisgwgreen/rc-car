@@ -1,174 +1,95 @@
+#define LED_BUILTIN 2
+
+#include <Arduino.h>
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
+#include <html.h>
+#include <motor.h>
 
-const char *ssid = "RC-CAR";
-const char *password = "123456789";
+const char *ssid = "CAR-1";
 
-bool ledState = 0;
+HTML html;
+MOTOR motor;
+
+bool isConnected = 0;
 const int ledPin = 2;
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
-const char index_html[] PROGMEM = R"rawliteral(
-<!DOCTYPE HTML><html>
-<head>
-  <title>ESP Web Server</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" href="data:,">
-  <style>
-  html {
-    font-family: Arial, Helvetica, sans-serif;
-    text-align: center;
-  }
-  h1 {
-    font-size: 1.8rem;
-    color: white; 
-  }
-  h2{
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #143642;
-  }
-  .topnav {
-    overflow: hidden;
-    background-color: #143642;
-  }
-  body {
-    margin: 0;
-  }
-  .content {
-    padding: 30px;
-    max-width: 600px;
-    margin: 0 auto;
-  }
-  .card {
-    background-color: #F8F7F9;;
-    box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5);
-    padding-top:10px;
-    padding-bottom:20px;
-  }
-  .button {
-    padding: 15px 50px;
-    font-size: 24px;
-    text-align: center;
-    outline: none;
-    color: #fff;
-    background-color: #0f8b8d;
-    border: none;
-    border-radius: 5px;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-tap-highlight-color: rgba(0,0,0,0);
-   }
-   /*.button:hover {background-color: #0f8b8d}*/
-   .button:active {
-     background-color: #0f8b8d;
-     box-shadow: 2 2px #CDCDCD;
-     transform: translateY(2px);
-   }
-   .state {
-     font-size: 1.5rem;
-     color:#8c8c8c;
-     font-weight: bold;
-   }
-  </style>
-<title>ESP Web Server</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="data:,">
-</head>
-<body>
-  <div class="topnav">
-    <h1>ESP WebSocket Server</h1>
-  </div>
-  <div class="content">
-    <div class="card">
-      <h2>Output - GPIO 2</h2>
-      <p class="state">state: <span id="state">%STATE%</span></p>
-      <p><button id="button" class="button">Toggle</button></p>
-    </div>
-  </div>
-<script>
-  var gateway = `ws://${window.location.hostname}/ws`;
-  var websocket;
-  window.addEventListener('load', onLoad);
-  function initWebSocket() {
-    console.log('Trying to open a WebSocket connection...');
-    websocket = new WebSocket(gateway);
-    websocket.onopen    = onOpen;
-    websocket.onclose   = onClose;
-    websocket.onmessage = onMessage; // <-- add this line
-  }
-  function onOpen(event) {
-    console.log('Connection opened');
-  }
-  function onClose(event) {
-    console.log('Connection closed');
-    setTimeout(initWebSocket, 2000);
-  }
-  function onMessage(event) {
-    var state;
-    if (event.data == "1"){
-      state = "ON";
-    }
-    else{
-      state = "OFF";
-    }
-    document.getElementById('state').innerHTML = state;
-  }
-  function onLoad(event) {
-    initWebSocket();
-    initButton();
-  }
-  function initButton() {
-    document.getElementById('button').addEventListener('click', toggle);
-  }
-  function toggle(){
-    websocket.send('toggle');
-  }
-</script>
-</body>
-</html>
-)rawliteral";
-
-void notifyClients()
-{
-  ws.textAll(String(ledState));
-}
-
+/**
+ * @brief handleWebSocketMessage processes the message recieved from the controller (in the form or '-100,100').
+ * 
+ * @param arg 
+ * @param data 
+ * @param len 
+ */
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 {
   AwsFrameInfo *info = (AwsFrameInfo *)arg;
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
   {
     data[len] = 0;
-    if (strcmp((char *)data, "toggle") == 0)
+
+    char *coords[2];
+    char *parts;
+    int partIndex = 0;
+
+    parts = strtok((char *)data, ",");
+
+    while (parts && partIndex < 2)
     {
-      ledState = !ledState;
-      notifyClients();
-    }
+      coords[partIndex] = parts;
+      parts = strtok(NULL, ",");
+      partIndex++;
+    };
+
+    int x = atoi(coords[0]);
+    int y = atoi(coords[1]);
+
+    motor.setMotor(x, y);
   }
 }
 
-void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
-             void *arg, uint8_t *data, size_t len)
+/**
+ * @brief handleEvent is triggered when a websocket message is sent from the html (controller).
+ * 
+ * @param server 
+ * @param client 
+ * @param type 
+ * @param arg 
+ * @param data 
+ * @param len 
+ */
+void handleEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
+                 void *arg, uint8_t *data, size_t len)
 {
+
   switch (type)
   {
   case WS_EVT_CONNECT:
+
+    Serial.print("IS CONNECTED -> ");
+    Serial.println(isConnected);
+
+    if (isConnected)
+      client->close();
+
     Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+
+    client->text((char *)ssid);
+    isConnected = 1;
     break;
   case WS_EVT_DISCONNECT:
     Serial.printf("WebSocket client #%u disconnected\n", client->id());
+    ws.textAll("disconnected");
+    isConnected = 0;
     break;
   case WS_EVT_DATA:
     handleWebSocketMessage(arg, data, len);
+    isConnected = 1;
     break;
   case WS_EVT_PONG:
   case WS_EVT_ERROR:
@@ -176,37 +97,16 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   }
 }
 
-void initWebSocket()
-{
-  ws.onEvent(onEvent);
-  server.addHandler(&ws);
-}
-
-String processor(const String &var)
-{
-  Serial.println(var);
-  if (var == "STATE")
-  {
-    if (ledState)
-    {
-      return "ON";
-    }
-    else
-    {
-      return "OFF";
-    }
-  }
-  return String();
-}
-
+/**
+ * @brief 
+ * setup initialises the esp32's gpio pins and core functionality (e.g. setting up the wireless access point)
+ */
 void setup()
 {
   Serial.begin(115200);
 
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
-
-  WiFi.softAP(ssid, password);
+  // ACCESS POINT
+  WiFi.softAP(ssid);
 
   if (!MDNS.begin("rc"))
   {
@@ -214,22 +114,33 @@ void setup()
     return;
   }
 
-  Serial.println("mDNS responder started");
-
   IPAddress IP = WiFi.softAPIP();
-  Serial.print("AP IP address: ");
+  Serial.print("IP - ");
   Serial.println(IP);
+  Serial.println("mDNS - http://rc.local");
 
-  initWebSocket();
-
+  // SERVER
+  ws.onEvent(handleEvent);
+  server.addHandler(&ws);
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send_P(200, "text/html", index_html, processor); });
+            { request->send_P(200, "text/html", html.getHTML()); });
 
   server.begin();
+
+  // MOTOR
+  // ----------
+  motor.setup();
+
+  // LED
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
+/**
+ * @brief loop repeats continously whilst the esp32 is powered. In this loop, the led state is maintained (based on whether there are any connections) and the websockets are managed here. 
+ */
 void loop()
 {
   ws.cleanupClients();
-  digitalWrite(ledPin, ledState);
+  digitalWrite(LED_BUILTIN, isConnected);
 }

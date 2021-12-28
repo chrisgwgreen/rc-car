@@ -9,3 +9,8 @@ node_modules
 # README
 test/README
 lib/README
+
+# Logs
+yarn-error.log
+
+.DS_Store
