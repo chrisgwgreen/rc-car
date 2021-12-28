@@ -6,8 +6,8 @@
 #include <html.h>
 #include <motor.h>
 
-#include <iostream>
-#include <fstream>
+// #include <iostream>
+// #include <fstream>
 
 const char *ssid = "RC-CAR";
 const char *password = "123456789";
@@ -29,25 +29,20 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
     data[len] = 0;
 
     char *coords[2];
-    char *p;
-    int i = 0;
+    char *part;
+    int partIndex = 0;
 
-    p = strtok((char *)data, ",");
+    part = strtok((char *)data, ",");
 
-    while (p && i < 2)
+    while (part && partIndex < 2)
     {
-      coords[i] = p;
-      p = strtok(NULL, ",");
-      i++;
+      coords[partIndex] = part;
+      part = strtok(NULL, ",");
+      partIndex++;
     };
 
     int x = atoi(coords[0]);
     int y = atoi(coords[1]);
-
-    // Serial.print("x:");
-    // Serial.print(x);
-    // Serial.print(", y:");
-    // Serial.println(y);
 
     motor.setMotor(x, y);
   }

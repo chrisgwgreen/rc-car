@@ -76,6 +76,10 @@ void MOTOR::setMotor(int x, int y)
     left += minSpeed;
     right += minSpeed;
 
+    Serial.print(right);
+    Serial.print(" - ");
+    Serial.println(left);
+
     analogWrite(ENA, right);
     analogWrite(ENB, left);
   }
