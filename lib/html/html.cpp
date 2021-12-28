@@ -104,8 +104,6 @@ const char* HTML::getHTML() {
         <div id="control"></div>
       </div>
     </div>
-
-    <button id="button" class="button">Toggle</button>
     <script>
       const gateway = `ws://${window.location.hostname}/ws`;
       const wrapper = document.getElementById("wrapper");
@@ -172,8 +170,6 @@ const char* HTML::getHTML() {
         x = 0;
         y = 0;
         render(x, y);
-
-        websocket.send('0,0')
       };
 
       const handleResize = () => {

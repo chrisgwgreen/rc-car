@@ -1,8 +1,9 @@
 #ifndef html_c
 #define html_c
-class HTML{
+class HTML
+{
 public:
-HTML();
-const char *getHTML();
+  HTML();
+  const char *getHTML();
 };
 #endif

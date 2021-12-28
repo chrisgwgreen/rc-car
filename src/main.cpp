@@ -1,8 +1,10 @@
+#include <Arduino.h>
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
 #include <html.h>
+#include <motor.h>
 
 #include <iostream>
 #include <fstream>
@@ -11,6 +13,7 @@ const char *ssid = "RC-CAR";
 const char *password = "123456789";
 
 HTML html;
+MOTOR motor;
 
 bool ledState = 0;
 const int ledPin = 2;
@@ -25,13 +28,28 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
   {
     data[len] = 0;
 
-    Serial.print("MESSAGE - ");
-    Serial.println((char *)data);
+    char *coords[2];
+    char *p;
+    int i = 0;
 
-    if (strcmp((char *)data, "toggle") == 0)
+    p = strtok((char *)data, ",");
+
+    while (p && i < 2)
     {
-      ledState = !ledState;
-    }
+      coords[i] = p;
+      p = strtok(NULL, ",");
+      i++;
+    };
+
+    int x = atoi(coords[0]);
+    int y = atoi(coords[1]);
+
+    // Serial.print("x:");
+    // Serial.print(x);
+    // Serial.print(", y:");
+    // Serial.println(y);
+
+    motor.setMotor(x, y);
   }
 }
 
@@ -42,9 +60,11 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   {
   case WS_EVT_CONNECT:
     Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    ledState = 1;
     break;
   case WS_EVT_DISCONNECT:
     Serial.printf("WebSocket client #%u disconnected\n", client->id());
+    ledState = 0;
     break;
   case WS_EVT_DATA:
     handleWebSocketMessage(arg, data, len);
@@ -65,9 +85,10 @@ void setup()
 {
   Serial.begin(115200);
 
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
+  // SETUP MOTOR
+  motor.setup();
 
+  // ACCESS POINT
   WiFi.softAP(ssid, password);
 
   if (!MDNS.begin("rc"))
@@ -81,12 +102,17 @@ void setup()
   Serial.println(IP);
   Serial.println("mDNS - http://rc.local");
 
+  // SERVER
   initWebSocket();
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "text/html", html.getHTML()); });
 
   server.begin();
+
+  // MISC
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
 }
 
 void loop()
